@@ -13,7 +13,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Databases", "Databases\Data
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CSVParser", "CSVParser\CSVParser.csproj", "{2A12592E-3E43-483C-9B54-338CDA6F3E01}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Office", "..\Office\Office.csproj", "{70AD4C22-9956-4C85-B8E2-5BBAF218577C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Office", "Office\Office.csproj", "{6D487470-6C04-46CC-8C53-FFD971DDE927}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -41,10 +41,10 @@ Global
 		{2A12592E-3E43-483C-9B54-338CDA6F3E01}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2A12592E-3E43-483C-9B54-338CDA6F3E01}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2A12592E-3E43-483C-9B54-338CDA6F3E01}.Release|Any CPU.Build.0 = Release|Any CPU
-		{70AD4C22-9956-4C85-B8E2-5BBAF218577C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{70AD4C22-9956-4C85-B8E2-5BBAF218577C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{70AD4C22-9956-4C85-B8E2-5BBAF218577C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{70AD4C22-9956-4C85-B8E2-5BBAF218577C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6D487470-6C04-46CC-8C53-FFD971DDE927}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D487470-6C04-46CC-8C53-FFD971DDE927}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D487470-6C04-46CC-8C53-FFD971DDE927}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D487470-6C04-46CC-8C53-FFD971DDE927}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

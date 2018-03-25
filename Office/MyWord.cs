@@ -4,5 +4,9 @@ namespace Office
 {
     public class MyWord
     {
+        public MyWord()
+        {
+
+        }
     }
 }
