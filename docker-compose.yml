@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  mjolnir:
+    image: mjolnir
+    build:
+      context: .
+      dockerfile: Mjolnir/Dockerfile
+  database:
+    image: "microsoft/mssql-server-linux"
+    environment:
+      SA_PASSWORD: "your_password"
+      ACCEPT_EULA: "Y"
