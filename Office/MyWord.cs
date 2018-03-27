@@ -22,6 +22,7 @@ namespace Office
         MainDocumentPart mainDocumentPart;
         Body body;
         string path;
+        public string BodyXml { get { return mainDocumentPart.Document.Body.OuterXml; } }
 
         public MyWord(string path, MyWordDocumentProperties pageProp = null)
         {
