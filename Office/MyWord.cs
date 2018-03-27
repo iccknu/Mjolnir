@@ -215,6 +215,58 @@ namespace Office
         }
     }
 
+    public class CellStyle
+    {
+        public short[] Padding { get; set; }
+
+        public short TopPadding
+        {
+            get { return (Padding is null) ? (short)5 : Padding[0]; }
+            set { Padding[0] = (value > 0) ? value : (short)0; }
+        }
+        public short RightPadding
+        {
+            get { return (Padding is null) ? (short)5 : Padding[1]; }
+            set { Padding[1] = (value > 0) ? value : (short)0; }
+        }
+        public short BottomPadding
+        {
+            get { return (Padding is null) ? (short)5 : Padding[2]; }
+            set { Padding[2] = (value > 0) ? value : (short)0; }
+        }
+        public short LeftPadding
+        {
+            get { return (Padding is null) ? (short)5 : Padding[3]; }
+            set { Padding[3] = (value > 0) ? value : (short)0; }
+        }
+
+        public string Font { get; set; }
+        public int FontSize { get; set; }
+        public MyJustification Justification { get; set; }
+        public MyTypographicalEmphasis Emphasis { get; set; }
+        public short Colspan { get; set; }
+
+        public CellStyle() : this(null, "Times New Roman", 12,
+            MyJustification.Left, MyTypographicalEmphasis.Normal, 1)
+        { }
+
+
+        public CellStyle(short[] padding = null, string font = "Times New Roman", int fontSize = 12,
+            MyJustification justification = MyJustification.Left,
+            MyTypographicalEmphasis emphasis = MyTypographicalEmphasis.Normal, short colspan = 1)
+        {
+            Font = font;
+            FontSize = fontSize;
+            Justification = justification;
+            Emphasis = emphasis;
+            Colspan = colspan;
+
+            if (padding is null)
+                padding = new short[] { 0, 0, 0, 0 };
+            Padding = padding;
+        }
+    }
+
     public enum MyPageOrientation { Portrait, Landscape }
 
     public enum MyPageSize { Letter, A4 }
