@@ -175,6 +175,182 @@ namespace Office
             }
         }
 
+        /// <summary>
+        /// Searches for the specific substring in the document and replaces it with saving styles
+        /// </summary>
+        /// <param name="oldString">String to replace.</param>
+        /// <param name="newString">String that will be placed instead the old one.</param>
+        public void ReplaceWord(string oldString, string newString)
+        {
+            var allParagraphs = wordProcessingDocument.MainDocumentPart.Document.Body.Elements<Paragraph>();
+            foreach (Paragraph p in allParagraphs)
+            {
+                ReplaceTextInParagraph(oldString, newString, p);
+            }
+        }
+
+        /// <summary>
+        /// Searches for the specific substring in paragraph and replaces it. 
+        /// </summary>
+        /// <param name="oldString"></param>
+        /// <param name="newString"></param>
+        /// <param name="p"></param>
+        private static void ReplaceTextInParagraph(string oldString, string newString, Paragraph p)
+        {
+            //the main problem is that the text in paragraph is randomly distributed in Run elements
+            //and oldString can be placed in several Runs
+            if (oldString.Length == 0) throw new Exception("Empty string to replace");
+            var allchildren = p.Elements<Run>().ToList();
+            string[] texts = new string[allchildren.Count];
+            for (int i = 0; i < allchildren.Count; i++)
+            {
+                texts[i] = allchildren[i].InnerText;
+            }
+            string textInParagraph = String.Join("", texts, 0, texts.Length);
+            if (!textInParagraph.Contains(oldString)) return;
+            //we iterating through characters just to be sure we do not touch already processed characters
+            for (int i = 0; i < textInParagraph.Length; i++)
+            {
+                int pos = textInParagraph.IndexOf(oldString, i); //zerobased index of first character of oldString in textInParagraph
+                if (pos == -1) break;
+                int startIndex = 0; // index of first run block which contains (at least part of) oldString
+                int endIndex = 0; // index of last run block which contains (at least part of) oldString
+                int ax = 0;
+                for (startIndex = 0; startIndex < texts.Length; startIndex++)
+                {
+                    ax += texts[startIndex].Length;
+                    if (ax > pos) { break; }
+                }
+                ax = 0;
+                for (endIndex = 0; endIndex < texts.Length; endIndex++)
+                {
+                    ax += texts[endIndex].Length;
+                    if (ax > pos + oldString.Length - 1) { break; }
+                }
+                //at this point blocks from startindex to endIndex contains oldString whitin
+                {
+                    int relativepos = pos; //zerobased index of first character of oldstring relative to startindex block
+                    //use relativepos to correctly replace oldstring (for example it helps to replace oldstring only once when oldstring is equal to newstring)
+
+                    for (int j = 0; j < startIndex; j++)
+                    {
+                        relativepos -= texts[j].Length;
+                    }
+                    string text = String.Join("", texts, startIndex, endIndex - startIndex + 1);
+                    string leftPart = text.Substring(0, relativepos + oldString.Length);
+                    string rightPart = text.Substring(relativepos + oldString.Length);
+                    texts[startIndex] = leftPart;
+                    if (endIndex > startIndex) texts[endIndex] = rightPart;
+                    else texts[startIndex] += rightPart;
+                    //erasing bloks between startindex and endIndex, because all information contains in startindex block and endIndex block
+                    for (int j = startIndex + 1; j < endIndex; j++)
+                    {
+                        texts[j] = "";
+                        allchildren[j].Remove();
+                    }
+                    //write all information (including replaced string) to startindex block and endIndex block
+                    allchildren[startIndex].RemoveAllChildren<Text>();
+                    allchildren[startIndex].Append(new Text(texts[startIndex].Replace(oldString, newString)));
+                    texts[startIndex] = texts[startIndex].Replace(oldString, newString);
+                    if (endIndex > startIndex)
+                    {
+                        allchildren[endIndex].RemoveAllChildren<Text>();
+                        allchildren[endIndex].Append(new Text(texts[endIndex]));
+                    }
+                }
+                textInParagraph = String.Join("", texts, 0, texts.Length); // refresh textInParagraph whith replaced word
+                i = pos + newString.Length - 1; // set counter just at the end of replaced word
+            }
+        }
+
+        public void AppendRow(string[] keyWordsRow, string[] newWordsRow)
+        {
+            TableRow row = FindRow(keyWordsRow);
+            if (row == null) return;
+            Table tb = row.Parent as Table;
+            TableRow newRow = (TableRow)row.CloneNode(deep: true);
+            TableCell[] cells = newRow.Elements<TableCell>().ToArray();
+            for (int i = 0; i < cells.Length; i++)
+            {
+                ReplaceTextInParagraph(keyWordsRow[i], newWordsRow[i], cells[i].Elements<Paragraph>().First());
+            }
+            tb.AppendChild(newRow);
+        }
+
+        public void DeleteRow(string[] keyWordsRow)
+        {
+            TableRow row = FindRow(keyWordsRow);
+            if (row != null)
+            {
+                row.Remove();
+            }
+        }
+
+        /// <summary>
+        /// Returns first occurence of TableRow that have exactly same words
+        /// </summary>
+        /// <param name="keyWordsRow"></param>
+        /// <returns></returns>
+        TableRow FindRow(string[] keyWordsRow)
+        {
+            Stack<OpenXmlElement> stack = new Stack<OpenXmlElement>();
+            stack.Push(body);
+            while (stack.Count > 0)
+            {
+                OpenXmlElement el = stack.Pop();
+                foreach (var child in el.Elements())
+                {
+                    stack.Push(child);
+                }
+                if (!(el is Table)) continue;
+                Table tb = el as Table;
+                TableRow[] rows = tb.Elements<TableRow>().ToArray();
+                foreach (var row in rows)
+                {
+                    if (row.Elements<TableCell>().Count() != keyWordsRow.Length) continue;
+                    List<string> words = new List<string>(keyWordsRow.Length);
+                    foreach (TableCell cell in row.Elements<TableCell>().ToArray())
+                    {
+                        words.Add(cell.InnerText);
+                    }
+                    bool same = true;
+                    for (int i = 0; i < words.Count; i++)
+                    {
+                        if (words[i] != keyWordsRow[i])
+                        {
+                            same = false;
+                            break;
+                        }
+                    }
+                    if (same)
+                    {
+                        return row;
+                    }
+                }
+            }
+            return null;
+        }
+
+        public void Save()
+        {
+            mainDocumentPart.Document.Save();
+            wordProcessingDocument.Save();
+            //rewriting whole file
+            using (Stream stream = new FileStream(path, FileMode.Create, FileAccess.ReadWrite))
+            {
+                using (OpenXmlPackage docfile = wordProcessingDocument.Clone(stream))
+                {
+                    docfile.Save();
+                }
+            }//stream is not automaticaly closed when document closed (when using Clone)   
+        }
+
+        public void Close()
+        {
+            Save();
+            wordProcessingDocument.Close();
+        }
+
         private PageSize GetPageSize(MyWordDocumentProperties pageProp)
         {
             PageSize pageSize = new PageSize();
@@ -309,23 +485,17 @@ namespace Office
 
     public class MyTableCell
     {
-        public string Text { get; set; }
-        public string Font { get; set; }
-        public int FontSize { get; set; }
-        public MyJustification Justification { get; set; }
-        public MyTypographicalEmphasis TypographicalEmphasis { get; set; }
-        public int CollSpan { get; set; }
-        public MyMargin Margin { get; set; }
-
-        public MyTableCell(string cellText)
+        public CellStyle Style { get; private set; }
+        public string Text { get; private set; }
+        public MyTableCell(string text)
         {
-            Text = cellText;
-            Font = "Times New Roman";
-            FontSize = 12;
-            Justification = MyJustification.Left;
-            TypographicalEmphasis = MyTypographicalEmphasis.Normal;
-            Margin = new MyMargin();
-            CollSpan = 1;
+            Text = text;
+            this.Style = new CellStyle();
+        }
+        public MyTableCell(string text, CellStyle style)
+        {
+            Text = text;
+            this.Style = style;
         }
     }
 
