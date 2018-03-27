@@ -3,9 +3,19 @@ using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using System.IO;
+using A = DocumentFormat.OpenXml.Drawing;
+using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
+using PIC = DocumentFormat.OpenXml.Drawing.Pictures;
+using System.Drawing;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace Office
 {
+    public enum MyJustification { Left, Center, Right }
+
+    public enum MyTypographicalEmphasis { Normal, Bold }
+
     public class MyWord
     {
         WordprocessingDocument wordProcessingDocument;
@@ -191,6 +201,110 @@ namespace Office
             return pageSize;
         }
 
+        public void AddParagraph(string text, int textSize, string font, MyTypographicalEmphasis typoEmp, MyJustification justification)
+        {
+            RunProperties runProp = GetRunProperties(font, textSize, typoEmp);
+            Run run = new Run(runProp, new Text(text));
+
+            ParagraphProperties paraProp = new ParagraphProperties(new Justification()
+            {
+                Val = justification == MyJustification.Left ? JustificationValues.Left :
+                        justification == MyJustification.Right ? JustificationValues.Right :
+                        JustificationValues.Center
+            });
+
+            Paragraph paragraph = new Paragraph(paraProp, run);
+
+            body.AppendChild(paragraph);
+        }
+
+        public void AddParagraph(string text, int fontSize, string font)
+        {
+            AddParagraph(text, fontSize, font, MyTypographicalEmphasis.Normal, MyJustification.Left);
+        }
+
+        public void AddParagraph(string text)
+        {
+            AddParagraph(text, 11, "Arial", MyTypographicalEmphasis.Normal, MyJustification.Left);
+        }
+
+        public void AddTable(MyTable myTable)
+        {
+            Table table = new Table(GetTableProperties());
+
+            TableRow headersRow = new TableRow(new TableRowProperties(new TableHeader()));
+            FillRow(headersRow, myTable.Headers);
+            table.Append(headersRow);
+
+            foreach (var row in myTable.Rows)
+            {
+                TableRow tableRow = new TableRow();
+                FillRow(tableRow, row);
+                table.Append(tableRow);
+            }
+
+            body.Append(table);
+        }
+
+
+        private void FillRow(TableRow targetRow, MyTableRow sourceRow)
+        {
+            foreach (var cell in sourceRow.Cells)
+            {
+                TableCellProperties tableCellProperties = new TableCellProperties(
+                    new TableCellMargin()
+                    {
+                        LeftMargin = new LeftMargin() { Width = cell.Style.LeftPadding.ToString() },
+                        RightMargin = new RightMargin() { Width = cell.Style.RightPadding.ToString() },
+                        TopMargin = new TopMargin() { Width = cell.Style.TopPadding.ToString() },
+                        BottomMargin = new BottomMargin() { Width = cell.Style.BottomPadding.ToString() }
+                    },
+                    new GridSpan() { Val = cell.Style.Colspan }
+                );
+                TableCell tableCell = new TableCell(tableCellProperties);
+
+                ParagraphProperties paraProp = new ParagraphProperties(new Justification()
+                {
+                    Val = cell.Style.Justification == MyJustification.Left ? JustificationValues.Left :
+                        cell.Style.Justification == MyJustification.Right ? JustificationValues.Right :
+                        JustificationValues.Center
+                })
+                { SpacingBetweenLines = new SpacingBetweenLines() { After = "50", Line = "240" } };
+
+                RunProperties runProp = GetRunProperties(cell.Style.Font, cell.Style.FontSize, cell.Style.Emphasis);
+
+                Paragraph para = new Paragraph(paraProp, new Run(runProp, new Text(cell.Text)));
+                tableCell.Append(para);
+                targetRow.Append(tableCell);
+            }
+        }
+
+        private TableProperties GetTableProperties()
+        {
+            TableProperties tblProp = new TableProperties(
+                    new TableBorders(
+                        new TopBorder() { Val = new EnumValue<BorderValues>(BorderValues.Thick), Size = 6 },
+                        new BottomBorder() { Val = new EnumValue<BorderValues>(BorderValues.Thick), Size = 6 },
+                        new LeftBorder() { Val = new EnumValue<BorderValues>(BorderValues.Thick), Size = 6 },
+                        new RightBorder() { Val = new EnumValue<BorderValues>(BorderValues.Thick), Size = 6 },
+                        new InsideHorizontalBorder() { Val = new EnumValue<BorderValues>(BorderValues.Thick), Size = 6 },
+                        new InsideVerticalBorder() { Val = new EnumValue<BorderValues>(BorderValues.Thick), Size = 6 }
+                    ),
+                    new TableWidth() { Width = "5000", Type = TableWidthUnitValues.Pct }
+                );
+            return tblProp;
+        }
+
+        private RunProperties GetRunProperties(string font, int fontSize, MyTypographicalEmphasis typoEmp)
+        {
+            RunProperties runProp = new RunProperties(
+                new FontSize() { Val = (fontSize * 2).ToString() },
+                new RunFonts() { Ascii = font, HighAnsi = font }
+            );
+            if (typoEmp == MyTypographicalEmphasis.Bold) runProp.Bold = new Bold();
+            return runProp;
+        }
+
     }
 
     public class MyTableCell
@@ -214,6 +328,73 @@ namespace Office
             CollSpan = 1;
         }
     }
+
+
+    public class MyTableRow
+    {
+        public List<MyTableCell> Cells { get; set; } = new List<MyTableCell>();
+
+        public MyTableRow() { }
+
+        public MyTableRow(IEnumerable<string> data)
+        {
+            foreach (string cellText in data)
+            {
+                Cells.Add(new MyTableCell(cellText));
+            }
+        }
+
+        public MyTableRow(IEnumerable<MyTableCell> cells)
+        {
+            AddCells(cells);
+        }
+
+        public void AddCells(IEnumerable<MyTableCell> cells)
+        {
+            foreach (MyTableCell cell in cells)
+            {
+                AddCell(cell);
+            }
+        }
+
+        public void AddCell(MyTableCell cell)
+        {
+            Cells.Add(cell);
+        }
+    }
+
+
+
+    public class MyTable
+    {
+        public MyTableRow Headers { get; set; }
+        public List<MyTableRow> Rows { get; set; } = new List<MyTableRow>();
+
+        public MyTable(MyTableRow headers)
+        {
+            Headers = headers;
+        }
+
+        public MyTable(MyTableRow headers, IEnumerable<MyTableRow> rows)
+        {
+            Headers = headers;
+            AddRows(rows);
+        }
+
+        public void AddRows(IEnumerable<MyTableRow> rows)
+        {
+            foreach (MyTableRow row in rows)
+            {
+                AddRow(row);
+            }
+        }
+
+        public void AddRow(MyTableRow row)
+        {
+            Rows.Add(row);
+        }
+    }
+
 
     public enum MyPageOrientation { Portrait, Landscape }
 
