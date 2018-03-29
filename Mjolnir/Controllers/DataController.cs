@@ -11,6 +11,10 @@ namespace Mjolnir.Controllers
     [Route("api/data")]
     public class DataController : Controller
     {
-       
+       [HttpGet]
+       public string Get()
+       {
+            return "Data info";
+       }
     }
 }

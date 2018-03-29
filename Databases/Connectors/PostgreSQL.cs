@@ -32,7 +32,7 @@ namespace Databases.Connectors
             throw new NotImplementedException();
         }
 
-        public override void Insert(string tableName, string[] fields)
+        public override string Insert(string tableName, string[] fields)
         {
             throw new NotImplementedException();
         }
